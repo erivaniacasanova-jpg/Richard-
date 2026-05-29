@@ -87,6 +87,7 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
   const [showWelcomeVideo, setShowWelcomeVideo] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [cepValid, setCepValid] = useState<boolean | null>(null)
+  const [showProcessingModal, setShowProcessingModal] = useState(false)
 
   const [formData, setFormData] = useState({
     cpf: "",
@@ -510,36 +511,35 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
 
     // Validações
     if (!validateCPF(formData.cpf)) {
       setErrorMessage("CPF inválido! Por favor, verifique o CPF informado.")
       setShowErrorModal(true)
-      setLoading(false)
       return
     }
 
     if (cepValid === false) {
       setErrorMessage("CEP inválido! Por favor, verifique o CEP informado e corrija antes de continuar.")
       setShowErrorModal(true)
-      setLoading(false)
       return
     }
 
     if (!formData.plan_id) {
       setErrorMessage("Por favor, selecione um plano antes de continuar.")
       setShowErrorModal(true)
-      setLoading(false)
       return
     }
 
     if (!formData.typeFrete) {
       setErrorMessage("Por favor, selecione a forma de envio antes de continuar.")
       setShowErrorModal(true)
-      setLoading(false)
       return
     }
+
+    // Mostrar popup de processamento
+    setShowProcessingModal(true)
+    setLoading(true)
 
     try {
       // Preparar dados CONVERTIDOS para o webhook
@@ -652,14 +652,16 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
                          !response.ok
 
           if (isError) {
-            // Exibir mensagem de erro retornada pelo webhook
+            // Fechar popup de processamento e exibir erro
+            setShowProcessingModal(false)
             setErrorMessage(webhookMessage)
             setShowErrorModal(true)
             setLoading(false)
             return
           }
 
-          // Se sucesso, exibir mensagem de sucesso
+          // Fechar popup de processamento e exibir sucesso
+          setShowProcessingModal(false)
           setSuccessMessage(webhookMessage)
           setLoading(false)
           setShowSuccessModal(true)
@@ -668,6 +670,7 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
 
         // Se não houver mensagem mas resposta for OK, sucesso genérico
         if (response.ok) {
+          setShowProcessingModal(false)
           setSuccessMessage('Cadastro realizado com sucesso!')
           setLoading(false)
           setShowSuccessModal(true)
@@ -675,12 +678,14 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
         }
 
         // Se não houver mensagem e não for ok, erro genérico
+        setShowProcessingModal(false)
         setErrorMessage('Erro ao processar cadastro. Tente novamente.')
         setShowErrorModal(true)
         setLoading(false)
 
       } catch (fetchError: any) {
         clearTimeout(timeoutId)
+        setShowProcessingModal(false)
 
         if (fetchError.name === 'AbortError') {
           setErrorMessage('Tempo limite excedido. O servidor está demorando para responder. Tente novamente.')
@@ -694,6 +699,7 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
 
     } catch (error) {
       console.error('Erro ao processar cadastro:', error)
+      setShowProcessingModal(false)
       setErrorMessage('Não foi possível completar o cadastro. Verifique sua conexão e tente novamente.')
       setShowErrorModal(true)
       setLoading(false)
@@ -1171,6 +1177,21 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
           </Button>
         </div>
       </form>
+
+      {/* Modal de Processamento */}
+      {showProcessingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg p-8 mx-auto max-w-md w-full shadow-2xl text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Aguarde enquanto estamos finalizando o seu cadastro
+            </h2>
+            <p className="text-sm text-gray-600">
+              Por favor, não feche esta página...
+            </p>
+          </div>
+        </div>
+      )}
 
       <ErrorModal open={showErrorModal} onOpenChange={setShowErrorModal} message={errorMessage} />
     </>
