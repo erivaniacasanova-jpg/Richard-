@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import ErrorModal from "@/components/error-modal"
 
-const DEFAULT_REFERRAL_ID = "88389" // Wagner Cruz Vieira
+const DEFAULT_REFERRAL_ID = "160064" // Richard Feijo Da Silva
 
 const BRAZILIAN_STATES = [
   { value: "AC", label: "Acre" },
@@ -205,7 +205,7 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
     try {
       const waNumber = `55${numbers}`
 
-      const response = await fetch('https://webhook.fiqon.app/webhook/019b97c2-6aed-7162-8a3a-1fd63694ecd6/5fb591d0-1499-4928-9b9f-198abec46afe', {
+      const response = await fetch('https://webhook.fiqon.app/webhook/019e7410-59dc-71cb-9530-8f444174f768/ab50f63a-43ce-4f9b-bc25-3b78d64a59c6', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
