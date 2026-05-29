@@ -85,9 +85,9 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
   const [cpfValidated, setCpfValidated] = useState(false)
   const [emailValidated, setEmailValidated] = useState(false)
   const [showWelcomeVideo, setShowWelcomeVideo] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [cepValid, setCepValid] = useState<boolean | null>(null)
   const [showProcessingModal, setShowProcessingModal] = useState(false)
+  const [processingStatus, setProcessingStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
   const [formData, setFormData] = useState({
     cpf: "",
@@ -677,45 +677,56 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
                          lowerMessage.includes('sendo utilizado')
 
           if (isError) {
-            // Fechar popup de processamento e exibir erro
-            setShowProcessingModal(false)
+            // Exibir erro no modal de processamento
+            setProcessingStatus('error')
             setErrorMessage(webhookMessage)
-            setShowErrorModal(true)
-            setLoading(false)
+            setTimeout(() => {
+              setShowProcessingModal(false)
+              setShowErrorModal(true)
+              setLoading(false)
+            }, 2000)
             return
           }
 
-          // Fechar popup de processamento e exibir sucesso
-          setShowProcessingModal(false)
-          setSuccessMessage(webhookMessage)
-          setLoading(false)
-          setShowSuccessModal(true)
+          // Exibir sucesso no modal de processamento
+          setProcessingStatus('success')
+          setTimeout(() => {
+            setShowProcessingModal(false)
+            setLoading(false)
+          }, 2000)
           return
         }
 
         // Se não houver mensagem mas resposta for OK, sucesso genérico
         if (response.ok && !hasError) {
-          setShowProcessingModal(false)
-          setSuccessMessage('Cadastro realizado com sucesso!')
-          setLoading(false)
-          setShowSuccessModal(true)
+          setProcessingStatus('success')
+          setTimeout(() => {
+            setShowProcessingModal(false)
+            setLoading(false)
+          }, 2000)
           return
         }
 
         // Se não houver mensagem e não for ok, erro genérico
-        setShowProcessingModal(false)
+        setProcessingStatus('error')
         setErrorMessage('Erro ao processar cadastro. Tente novamente.')
-        setShowErrorModal(true)
-        setLoading(false)
+        setTimeout(() => {
+          setShowProcessingModal(false)
+          setShowErrorModal(true)
+          setLoading(false)
+        }, 2000)
 
       } catch (fetchError: any) {
         clearTimeout(timeoutId)
-        setShowProcessingModal(false)
 
         if (fetchError.name === 'AbortError') {
+          setProcessingStatus('error')
           setErrorMessage('Tempo limite excedido. O servidor está demorando para responder. Tente novamente.')
-          setShowErrorModal(true)
-          setLoading(false)
+          setTimeout(() => {
+            setShowProcessingModal(false)
+            setShowErrorModal(true)
+            setLoading(false)
+          }, 2000)
           return
         }
 
@@ -724,10 +735,13 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
 
     } catch (error) {
       console.error('Erro ao processar cadastro:', error)
-      setShowProcessingModal(false)
+      setProcessingStatus('error')
       setErrorMessage('Não foi possível completar o cadastro. Verifique sua conexão e tente novamente.')
-      setShowErrorModal(true)
-      setLoading(false)
+      setTimeout(() => {
+        setShowProcessingModal(false)
+        setShowErrorModal(true)
+        setLoading(false)
+      }, 2000)
     }
   }
 
@@ -1149,70 +1163,49 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
       {showProcessingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-lg p-8 mx-auto max-w-md w-full shadow-2xl text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              Aguarde enquanto estamos finalizando o seu cadastro
-            </h2>
-            <p className="text-sm text-gray-600">
-              Por favor, não feche esta página...
-            </p>
-          </div>
-        </div>
-      )}
+            {processingStatus === 'loading' && (
+              <>
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Aguarde enquanto estamos finalizando o seu cadastro
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Por favor, não feche esta página...
+                </p>
+              </>
+            )}
 
-      {/* Modal de Sucesso */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg p-6 mx-auto max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 text-center">
-              Parabéns! Seu cadastro foi realizado com sucesso. 🎉
-            </h1>
+            {processingStatus === 'success' && (
+              <>
+                <div className="flex justify-center mb-4">
+                  <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Seu cadastro foi realizado com sucesso!
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Você será redirecionado em breve...
+                </p>
+              </>
+            )}
 
-            <div className="space-y-3 text-gray-700 text-sm md:text-base leading-relaxed">
-              <p>
-                Para darmos continuidade com à ativação do seu plano, é necessário realizar o pagamento da sua taxa associativa, no valor proporcional ao plano escolhido por você.
-              </p>
-
-              <p>
-                Essa taxa é solicitada antes da ativação, pois ela confirma oficialmente a sua entrada na Federal Associados.
-              </p>
-
-              <p className="font-semibold">
-                O valor é usado para cobrir os custos administrativos e operacionais, como:
-              </p>
-
-              <ul className="list-disc list-inside space-y-1 ml-4 text-sm">
-                <li>Geração do número.</li>
-                <li>Configuração da linha.</li>
-                <li>Liberação do seu escritório virtual.</li>
-                <li>E acesso a todos os benefícios exclusivos da empresa, como o Clube de Descontos, Cinema Grátis, Programa PBI, entre outros.</li>
-              </ul>
-
-              <p>
-                O pagamento da taxa é o primeiro passo para liberar o seu benefício de internet móvel e garantir sua ativação com total segurança.
-              </p>
-
-              <p>
-                Logo após efetuar o pagamento, você receberá um e-mail para fazer a biometria digital.
-              </p>
-
-              <p className="font-semibold">
-                Após isso já partimos para ativação do seu plano.
-              </p>
-
-              <p className="text-center font-bold text-base md:text-lg mt-4">
-                Clique no botão abaixo para continuar:
-              </p>
-            </div>
-
-            <div className="flex justify-center mt-6">
-              <Button
-                onClick={() => window.location.href = "https://federalassociados.com.br/boletos"}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-base md:text-lg font-semibold rounded-lg shadow-lg transition-colors"
-              >
-                Realizar Adesão
-              </Button>
-            </div>
+            {processingStatus === 'error' && (
+              <>
+                <div className="flex justify-center mb-4">
+                  <svg className="w-16 h-16 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-red-600 mb-2">
+                  Erro ao processar cadastro
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Verifique os dados e tente novamente...
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
