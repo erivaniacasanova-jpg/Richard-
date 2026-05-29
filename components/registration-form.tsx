@@ -623,14 +623,30 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
 
         // Variável para armazenar a mensagem final
         let webhookMessage = ''
+        let hasError = false
 
         // Tentar parsear como JSON primeiro
         try {
           const responseData = JSON.parse(responseText)
           console.log('[FiQOn] Resposta parseada como JSON:', responseData)
 
-          // Extrair mensagem do JSON (conforme $7.body.message do FiQOn)
-          webhookMessage = responseData.message || responseData.msg || responseData.mensagem || ''
+          // Verificar se há erros na resposta do FiQOn
+          if (responseData.errors && Object.keys(responseData.errors).length > 0) {
+            hasError = true
+            // Extrair mensagens de erro do objeto errors
+            const errorMessages: string[] = []
+            for (const field in responseData.errors) {
+              if (Array.isArray(responseData.errors[field])) {
+                errorMessages.push(...responseData.errors[field])
+              } else if (typeof responseData.errors[field] === 'string') {
+                errorMessages.push(responseData.errors[field])
+              }
+            }
+            webhookMessage = errorMessages.join(' ')
+          } else {
+            // Extrair mensagem do JSON (conforme resposta de sucesso do FiQOn)
+            webhookMessage = responseData.message || responseData.msg || responseData.mensagem || responseData.success || ''
+          }
         } catch (parseError) {
           // Se não for JSON, usar o texto puro como mensagem
           console.log('[FiQOn] Resposta não é JSON, usando texto puro')
@@ -638,18 +654,27 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
         }
 
         console.log('[FiQOn] Mensagem final capturada:', webhookMessage)
+        console.log('[FiQOn] Has Error:', hasError)
 
         // Se temos uma mensagem, exibir para o usuário
         if (webhookMessage) {
-          // Verificar se é erro (geralmente contém palavras-chave de erro)
+          // Se já detectou erro na estrutura, mostrar erro
+          if (hasError) {
+            setShowProcessingModal(false)
+            setErrorMessage(webhookMessage)
+            setShowErrorModal(true)
+            setLoading(false)
+            return
+          }
+
+          // Verificar também por palavras-chave de erro na mensagem
           const lowerMessage = webhookMessage.toLowerCase()
           const isError = lowerMessage.includes('erro') ||
                          lowerMessage.includes('já') ||
                          lowerMessage.includes('inválido') ||
                          lowerMessage.includes('falha') ||
                          lowerMessage.includes('não') ||
-                         lowerMessage.includes('sendo utilizado') ||
-                         !response.ok
+                         lowerMessage.includes('sendo utilizado')
 
           if (isError) {
             // Fechar popup de processamento e exibir erro
@@ -669,7 +694,7 @@ export default function RegistrationForm({ representante }: RegistrationFormProp
         }
 
         // Se não houver mensagem mas resposta for OK, sucesso genérico
-        if (response.ok) {
+        if (response.ok && !hasError) {
           setShowProcessingModal(false)
           setSuccessMessage('Cadastro realizado com sucesso!')
           setLoading(false)
